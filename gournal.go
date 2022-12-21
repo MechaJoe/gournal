@@ -6,10 +6,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/joho/godotenv"
 )
+
+var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 func main() {
 	godotenv.Load()
@@ -23,7 +27,14 @@ func main() {
 		}
 		defer f.Close()
 	}
-	p := tea.NewProgram(initialModel())
+
+	var p *tea.Program
+
+	if len(os.Args) < 2 || os.Args[1] == "new" {
+		p = tea.NewProgram(writingModel())
+	} else if len(os.Args) == 2 && os.Args[1] == "browse" {
+		p = tea.NewProgram(browsingModel())
+	}
 
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
@@ -32,17 +43,36 @@ func main() {
 
 type errMsg error
 
-type model struct {
+type journalModel struct {
 	textinput textinput.Model
 	err       error
 }
+type browseModel struct {
+	list list.Model
+	err  error
+}
 
-func initialModel() model {
+func browsingModel() browseModel {
+	journal, err := GetEntries()
+	if err != nil {
+		log.Fatal(err)
+	}
+	items := make([]list.Item, len(journal.Entries))
+	for i := 0; i < len(journal.Entries); i++ {
+		items[i] = journal.Entries[i]
+	}
+	
+	m := browseModel{list: list.New(items, list.NewDefaultDelegate(), 0, 0), err: nil}
+	m.list.Title = "Your Gournal Entries"
+	return m
+}
+
+func writingModel() journalModel {
 	ti := textinput.New()
 	ti.Placeholder = "Today, I..."
 	ti.Focus()
 
-	return model{
+	return journalModel{
 		textinput: ti,
 		err:       nil,
 	}
@@ -58,11 +88,26 @@ func processEntry(text string) tea.Cmd {
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m journalModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m browseModel) Init() tea.Cmd {
+	return nil
+}
+
+func (m browseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		h, v := docStyle.GetFrameSize()
+		m.list.SetSize(msg.Width-h, msg.Height-v)
+	}
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	return m, cmd
+}
+
+func (m journalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -90,8 +135,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
-	// if it's the morning, show this prompt
+func (m browseModel) View() string {
+	return docStyle.Render(m.list.View())
+}
+
+func (m journalModel) View() string {
 	var message string
 
 	currentHour := time.Now().Hour()
@@ -102,7 +150,7 @@ func (m model) View() string {
 	} else {
 		message = "Good evening. It's currently %s. How was your day?"
 	}
-	formatted_time := fmt.Sprintf("%d:%d", currentHour, time.Now().Minute())
+	formatted_time := fmt.Sprintf("%02d:%02d", currentHour, time.Now().Minute())
 	message = fmt.Sprintf(message, formatted_time)
 
 	return fmt.Sprintf(

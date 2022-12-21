@@ -12,6 +12,10 @@ type Entry struct {
 	Time time.Time
 }
 
+func (e Entry) Title() string       { return e.Time.String() }
+func (e Entry) Description() string { return e.Text }
+func (e Entry) FilterValue() string { return e.Text }
+
 type Journal struct {
 	Entries []Entry
 }
@@ -56,12 +60,35 @@ func Save(e Entry) error {
 }
 
 func InitJournal() error {
-	f1, err := os.OpenFile("gournal.json", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	f, err := os.OpenFile("gournal.json", os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatal(err)
 		return err
 	}
 
-	defer f1.Close()
+	defer f.Close()
 	return nil
+}
+
+func GetEntries() (*Journal, error) {
+	f, err := os.OpenFile("gournal.json", os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	defer f.Close()
+
+	content, err := os.ReadFile("gournal.json")
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	log.Printf("content: %s\n", content)
+	var journal Journal
+	err = json.Unmarshal(content, &journal)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	return &journal, err
 }
