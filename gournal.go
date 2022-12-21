@@ -202,7 +202,7 @@ func (m journalModel) View() string {
 	name := journal.User
 	currentHour := time.Now().Hour()
 	if currentHour < 12 {
-		message = "Good morning, %s! It's currently %s. What do you want to accomplish today?"
+		message = "Good morning, %s! It's currently %s AM. What do you want to accomplish today?"
 	} else if currentHour < 17 {
 		message = "Good afternoon, %s. It's currently %s. How is your day going?"
 	} else {
