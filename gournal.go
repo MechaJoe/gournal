@@ -37,8 +37,9 @@ func main() {
 		p = tea.NewProgram(writingModel())
 	} else if len(os.Args) == 2 && os.Args[1] == "browse" {
 		p = tea.NewProgram(browsingModel())
+	} else if len(os.Args) == 2 && os.Args[1] == "help" {
+		p = tea.NewProgram(helpPageModel())
 	}
-
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
@@ -59,6 +60,10 @@ type journalModel struct {
 type browseModel struct {
 	list list.Model
 	err  error
+}
+
+type helpModel struct {
+	err error
 }
 
 func initialModel() initModel {
@@ -87,6 +92,10 @@ func browsingModel() browseModel {
 	return m
 }
 
+func helpPageModel() helpModel {
+	return helpModel{}
+}
+
 func writingModel() journalModel {
 	ti := textinput.New()
 	ti.Placeholder = "Today, I..."
@@ -108,6 +117,10 @@ func processEntry(text string) tea.Cmd {
 	}
 }
 
+func (m helpModel) Init() tea.Cmd {
+	return nil
+}
+
 func (m initModel) Init() tea.Cmd {
 	return textinput.Blink
 }
@@ -118,6 +131,10 @@ func (m journalModel) Init() tea.Cmd {
 
 func (m browseModel) Init() tea.Cmd {
 	return nil
+}
+
+func (m helpModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	return m, tea.Quit
 }
 
 func (m initModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -179,6 +196,14 @@ func (m journalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	m.textinput, cmd = m.textinput.Update(msg)
 	return m, cmd
+}
+
+func (m helpModel) View() string {
+	message := "gournal is a tool for journaling in your terminal.\n\n" +
+		"Usage: \n\n" +
+		"gournal new - compose a new gournal entry \n" +
+		"gournal browse - browse all composed gournal entries\n"
+	return fmt.Sprint(message)
 }
 
 func (m browseModel) View() string {
