@@ -1,4 +1,4 @@
-module github.com/mechajoe/gournal
+module github.com/MechaJoe/gournal
 
 go 1.19
 
